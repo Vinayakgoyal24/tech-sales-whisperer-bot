@@ -7,16 +7,47 @@ import { useToast } from "@/hooks/use-toast";
 
 export function FileUpload() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
+    if (!file) return;
+
+    setIsUploading(true);
+    
+    try {
+      // For now, just store the file locally since no upload endpoint was specified
+      // You can uncomment and modify this section when you have a file upload endpoint
+      
+      /*
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch('http://localhost:8000/upload-file', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to upload file');
+      }
+      */
+      
       setUploadedFile(file);
       toast({
         title: "File Uploaded",
-        description: `${file.name} uploaded successfully. Processing for quotation...`,
+        description: `${file.name} uploaded successfully. Ready for quotation generation.`,
       });
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      toast({
+        title: "Upload Failed",
+        description: "Unable to upload file. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -44,13 +75,15 @@ export function FileUpload() {
             className="hidden"
             accept=".pdf,.doc,.docx,.txt,.xlsx,.xls"
             onChange={handleFileUpload}
+            disabled={isUploading}
           />
           <Button
             onClick={() => document.getElementById('file-upload')?.click()}
             size="sm"
             className="bg-blue-600 hover:bg-blue-700"
+            disabled={isUploading}
           >
-            Choose File
+            {isUploading ? "Uploading..." : "Choose File"}
           </Button>
           <p className="text-xs text-gray-500 mt-2">
             PDF, DOC, TXT, XLS supported

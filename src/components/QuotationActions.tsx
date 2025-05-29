@@ -7,22 +7,88 @@ import { useToast } from "@/hooks/use-toast";
 export function QuotationActions() {
   const { toast } = useToast();
 
-  const handleDownloadPDF = () => {
-    toast({
-      title: "PDF Downloaded",
-      description: "Quotation PDF has been downloaded successfully.",
-    });
-    // Simulate PDF download
-    console.log("Downloading PDF quotation...");
+  const handleDownloadPDF = async () => {
+    try {
+      toast({
+        title: "Generating PDF",
+        description: "Please wait while we generate your quotation PDF...",
+      });
+
+      const response = await fetch('http://localhost:8000/generate-pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `quotation-${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "PDF Downloaded",
+        description: "Quotation PDF has been downloaded successfully.",
+      });
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      toast({
+        title: "Download Failed",
+        description: "Unable to generate PDF. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDownloadPPT = () => {
-    toast({
-      title: "PPT Downloaded", 
-      description: "Quotation PowerPoint has been downloaded successfully.",
-    });
-    // Simulate PPT download
-    console.log("Downloading PPT quotation...");
+  const handleDownloadPPT = async () => {
+    try {
+      toast({
+        title: "Generating PPT",
+        description: "Please wait while we generate your quotation presentation...",
+      });
+
+      const response = await fetch('http://localhost:8000/generate-slides', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate PPT');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `quotation-${new Date().toISOString().split('T')[0]}.pptx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "PPT Downloaded", 
+        description: "Quotation PowerPoint has been downloaded successfully.",
+      });
+    } catch (error) {
+      console.error('Error downloading PPT:', error);
+      toast({
+        title: "Download Failed",
+        description: "Unable to generate PowerPoint. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

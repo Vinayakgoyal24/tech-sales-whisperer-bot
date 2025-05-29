@@ -55,37 +55,53 @@ export function ChatInterface({ chatId }: ChatInterfaceProps) {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentInput = inputValue;
     setInputValue("");
     setIsTyping(true);
 
-    // Simulate bot response
-    setTimeout(() => {
+    try {
+      const response = await fetch('http://localhost:8000/query', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: currentInput
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get response from server');
+      }
+
+      const data = await response.json();
+      
       const botResponse: Message = {
         id: (Date.now() + 1).toString(),
-        text: generateBotResponse(inputValue),
+        text: data.response || "I apologize, but I couldn't process your request at the moment.",
         sender: "bot",
         timestamp: new Date(),
-        hasQuotation: inputValue.toLowerCase().includes("quotation") || inputValue.toLowerCase().includes("quote"),
+        hasQuotation: data.has_quotation || false,
       };
 
       setMessages(prev => [...prev, botResponse]);
+    } catch (error) {
+      console.error('Error calling query API:', error);
+      toast({
+        title: "Connection Error",
+        description: "Unable to connect to the server. Please try again.",
+        variant: "destructive",
+      });
+      
+      const errorResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        text: "I'm sorry, I'm having trouble connecting to the server right now. Please try again in a moment.",
+        sender: "bot",
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorResponse]);
+    } finally {
       setIsTyping(false);
-    }, 1500);
-  };
-
-  const generateBotResponse = (userInput: string): string => {
-    const input = userInput.toLowerCase();
-    
-    if (input.includes("laptop") || input.includes("computer")) {
-      return "I can help you with laptops and computers! We have a wide range of options including gaming laptops, business laptops, and desktop computers. What's your budget range and intended use?";
-    } else if (input.includes("mouse") || input.includes("keyboard")) {
-      return "Great choice! We offer various peripherals including wireless mice, mechanical keyboards, and gaming accessories. Are you looking for gaming or office peripherals?";
-    } else if (input.includes("quotation") || input.includes("quote")) {
-      return "I've prepared a quotation based on your requirements. You can download it as a PDF or PowerPoint presentation using the buttons below. The quotation includes detailed specifications and competitive pricing.";
-    } else if (input.includes("price") || input.includes("cost")) {
-      return "Our prices are very competitive! I can provide detailed pricing for any specific products. Would you like me to generate a formal quotation with current market rates?";
-    } else {
-      return "I understand your inquiry about computer and peripheral products. Could you please provide more specific details about what you're looking for? I can help with laptops, desktops, monitors, keyboards, mice, and other accessories.";
     }
   };
 
@@ -146,12 +162,13 @@ export function ChatInterface({ chatId }: ChatInterfaceProps) {
               onKeyPress={handleKeyPress}
               placeholder="Ask about computers, peripherals, or request a quotation..."
               className="pr-12 border-blue-200 focus:border-blue-500"
+              disabled={isTyping}
             />
           </div>
           <VoiceButton />
           <Button 
             onClick={handleSendMessage}
-            disabled={!inputValue.trim()}
+            disabled={!inputValue.trim() || isTyping}
             className="bg-blue-600 hover:bg-blue-700"
           >
             <Send className="w-4 h-4" />
