@@ -59,6 +59,7 @@ export function ChatInterface({ chatId }: ChatInterfaceProps) {
     setIsTyping(true);
 
     try {
+      // Explicitly create the request body with 'question' field
       const requestBody = {
         question: currentInput
       };
