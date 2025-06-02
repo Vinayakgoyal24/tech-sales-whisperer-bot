@@ -66,7 +66,7 @@ export function ChatInterface({ chatId }: ChatInterfaceProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          query: currentInput
+          question: currentInput
         })
       });
 
