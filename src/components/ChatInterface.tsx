@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,7 +63,8 @@ export function ChatInterface({ chatId }: ChatInterfaceProps) {
         question: currentInput
       };
       
-      console.log('Sending request body:', requestBody);
+      console.log('About to send request with body:', requestBody);
+      console.log('JSON stringified body:', JSON.stringify(requestBody));
       
       const response = await fetch('http://localhost:8000/query', {
         method: 'POST',
@@ -79,12 +79,12 @@ export function ChatInterface({ chatId }: ChatInterfaceProps) {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.log('Error response:', errorText);
+        console.log('Error response body:', errorText);
         throw new Error(`Server responded with ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();
-      console.log('Response data:', data);
+      console.log('Success response data:', data);
       
       const botResponse: Message = {
         id: (Date.now() + 1).toString(),
