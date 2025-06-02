@@ -60,21 +60,31 @@ export function ChatInterface({ chatId }: ChatInterfaceProps) {
     setIsTyping(true);
 
     try {
+      const requestBody = {
+        question: currentInput
+      };
+      
+      console.log('Sending request body:', requestBody);
+      
       const response = await fetch('http://localhost:8000/query', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          question: currentInput
-        })
+        body: JSON.stringify(requestBody)
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+
       if (!response.ok) {
-        throw new Error('Failed to get response from server');
+        const errorText = await response.text();
+        console.log('Error response:', errorText);
+        throw new Error(`Server responded with ${response.status}: ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('Response data:', data);
       
       const botResponse: Message = {
         id: (Date.now() + 1).toString(),
