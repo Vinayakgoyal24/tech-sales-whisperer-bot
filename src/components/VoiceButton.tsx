@@ -1,36 +1,63 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Mic } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-export function VoiceButton() {
+interface VoiceButtonProps {
+  setInputText: (text: string) => void;
+}
+
+export function VoiceButton({ setInputText }: VoiceButtonProps) {
   const [isRecording, setIsRecording] = useState(false);
   const { toast } = useToast();
 
   const handleVoiceInteraction = () => {
-    if (!isRecording) {
+    const SpeechRecognition =
+      window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      toast({
+        title: "Not Supported",
+        description: "Your browser doesn't support Speech Recognition.",
+      });
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
       setIsRecording(true);
       toast({
         title: "Voice Recording Started",
         description: "Speak your query about products or quotations.",
       });
-      
-      // Simulate recording for demo
-      setTimeout(() => {
-        setIsRecording(false);
-        toast({
-          title: "Voice Recording Stopped",
-          description: "Processing your voice query...",
-        });
-      }, 3000);
-    } else {
+    };
+
+    recognition.onresult = (event) => {
+      const spokenText = event.results[0][0].transcript;
+      setInputText(spokenText); // Send result to textbox
+    };
+
+    recognition.onend = () => {
       setIsRecording(false);
       toast({
-        title: "Voice Recording Stopped",
-        description: "Processing your voice query...",
+        title: "Voice Recording Ended",
+        description: "You can now send your message.",
       });
-    }
+    };
+
+    recognition.onerror = (event) => {
+      setIsRecording(false);
+      toast({
+        title: "Voice Error",
+        description: event.error,
+      });
+    };
+
+    recognition.start();
   };
 
   return (
@@ -39,8 +66,8 @@ export function VoiceButton() {
       variant="outline"
       size="icon"
       className={`transition-colors ${
-        isRecording 
-          ? "bg-red-100 border-red-300 text-red-700 animate-pulse" 
+        isRecording
+          ? "bg-red-100 border-red-300 text-red-700 animate-pulse"
           : "border-blue-200 hover:bg-blue-50"
       }`}
     >

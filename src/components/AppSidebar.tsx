@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import {
   Sidebar,
@@ -10,19 +9,36 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Plus, Upload, Download, History } from "lucide-react";
+import { MessageSquare, Plus, Upload, History } from "lucide-react";
 import { FileUpload } from "./FileUpload";
 import { ChatHistory } from "./ChatHistory";
+
+interface Message {
+  id: string;
+  text: string;
+  sender: "user" | "bot";
+  timestamp: Date;
+  hasQuotation?: boolean;
+  collectedInfo?: Record<string, string>;
+}
 
 interface AppSidebarProps {
   currentChatId: string;
   onChatSelect: (chatId: string) => void;
+  allChats: Record<string, Message[]>;
+  setAllChats: React.Dispatch<React.SetStateAction<Record<string, Message[]>>>;
+  setCurrentChatId: (chatId: string) => void;
 }
 
-export function AppSidebar({ currentChatId, onChatSelect }: AppSidebarProps) {
+export function AppSidebar({
+  currentChatId,
+  onChatSelect,
+  allChats,
+  setAllChats,
+  setCurrentChatId,
+}: AppSidebarProps) {
   const [activeSection, setActiveSection] = useState<string>("chat");
 
   const handleNewChat = () => {
@@ -51,7 +67,7 @@ export function AppSidebar({ currentChatId, onChatSelect }: AppSidebarProps) {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <Button 
+                <Button
                   onClick={handleNewChat}
                   className="w-full justify-start gap-2 bg-blue-600 hover:bg-blue-700"
                 >
@@ -68,7 +84,7 @@ export function AppSidebar({ currentChatId, onChatSelect }: AppSidebarProps) {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton 
+                <SidebarMenuButton
                   onClick={() => setActiveSection("upload")}
                   className={activeSection === "upload" ? "bg-blue-100" : ""}
                 >
@@ -77,7 +93,7 @@ export function AppSidebar({ currentChatId, onChatSelect }: AppSidebarProps) {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton 
+                <SidebarMenuButton
                   onClick={() => setActiveSection("history")}
                   className={activeSection === "history" ? "bg-blue-100" : ""}
                 >
@@ -91,9 +107,12 @@ export function AppSidebar({ currentChatId, onChatSelect }: AppSidebarProps) {
 
         {activeSection === "upload" && <FileUpload />}
         {activeSection === "history" && (
-          <ChatHistory 
+          <ChatHistory
             currentChatId={currentChatId}
             onChatSelect={onChatSelect}
+            allChats={allChats}
+            setAllChats={setAllChats}
+            setCurrentChatId={setCurrentChatId}
           />
         )}
       </SidebarContent>

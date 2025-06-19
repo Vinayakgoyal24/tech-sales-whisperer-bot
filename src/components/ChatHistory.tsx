@@ -1,39 +1,73 @@
-
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MessageSquare, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
+interface Message {
+  id: string;
+  text: string;
+  sender: "user" | "bot";
+  timestamp: Date;
+  hasQuotation?: boolean;
+  collectedInfo?: Record<string, string>;
+}
+
 interface ChatHistoryProps {
   currentChatId: string;
   onChatSelect: (chatId: string) => void;
+  allChats: Record<string, Message[]>;
+  setAllChats: React.Dispatch<React.SetStateAction<Record<string, Message[]>>>;
+  setCurrentChatId: (chatId: string) => void;
 }
 
-export function ChatHistory({ currentChatId, onChatSelect }: ChatHistoryProps) {
+export function ChatHistory({
+  currentChatId,
+  onChatSelect,
+  allChats,
+  setAllChats,
+  setCurrentChatId,
+}: ChatHistoryProps) {
   const { toast } = useToast();
-
-  const mockChats = [
-    { id: "default", title: "Current Chat", date: "Today" },
-    { id: "chat-1", title: "Gaming PC Quotation", date: "Yesterday" },
-    { id: "chat-2", title: "Office Setup Inquiry", date: "2 days ago" },
-    { id: "chat-3", title: "Laptop Recommendations", date: "1 week ago" },
-  ];
 
   const handleDeleteChat = (chatId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    setAllChats((prev) => {
+      const updated = { ...prev };
+      delete updated[chatId];
+      return updated;
+    });
+
     toast({
       title: "Chat Deleted",
       description: "Chat history has been removed.",
     });
-    console.log("Deleting chat:", chatId);
+
+    if (chatId === currentChatId) {
+      setCurrentChatId("default");
+    }
   };
+
+  const chats = Object.entries(allChats).map(([id, messages]) => {
+    const lastMsg = messages[messages.length - 1];
+    const title =
+      messages.find((msg) => msg.sender === "user")?.text.slice(0, 30) ||
+      "New Chat";
+    return {
+      id,
+      title: id === "default" ? "Current Chat" : title,
+      date:
+        lastMsg && lastMsg.timestamp
+          ? new Date(lastMsg.timestamp).toLocaleDateString()
+          : "Unknown",
+    };
+  });
 
   return (
     <Card className="p-4 border-blue-200">
       <h3 className="font-medium text-gray-900 mb-3">Previous Chats</h3>
-      
+
       <div className="space-y-2">
-        {mockChats.map((chat) => (
+        {chats.map((chat) => (
           <div
             key={chat.id}
             className={`p-3 rounded-lg border cursor-pointer transition-colors ${
