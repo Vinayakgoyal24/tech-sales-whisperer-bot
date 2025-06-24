@@ -95,10 +95,12 @@ export default function Index() {
           />
           <main className="flex-1 flex flex-col">
             <ChatInterface
-              chatId={currentChatId}
-              messages={allChats[currentChatId] || []}
-              onMessagesChange={handleMessagesChange}
-            />
+            key={currentChatId} // 👈 this line forces full component re-initialization
+            chatId={currentChatId}
+            messages={allChats[currentChatId] || []}
+            onMessagesChange={handleMessagesChange}
+          />
+
           </main>
         </div>
       </SidebarProvider>

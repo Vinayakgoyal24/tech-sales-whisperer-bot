@@ -46,6 +46,17 @@ export function ChatInterface({ chatId, messages, onMessagesChange }: ChatInterf
       .trim();
   };
 
+  const isValidEmail = (email: string) => {
+  const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return re.test(email);
+};
+
+const isValidPhone = (phone: string) => {
+  const re = /^\d{10}$/; // adjust regex as per your phone format
+  return re.test(phone);
+};
+
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -74,6 +85,28 @@ export function ChatInterface({ chatId, messages, onMessagesChange }: ChatInterf
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
+
+    if (step === "email" && !isValidEmail(inputValue.trim())) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
+    // Make bot repeat the email question by NOT advancing step
+      setInputValue(""); // clear input for re-entry
+      return;
+    }
+
+
+    if (step === "contact" && !isValidPhone(inputValue.trim())) {
+      toast({
+        title: "Invalid Phone Number",
+        description: "Please enter a valid phone number.",
+        variant: "destructive",
+      });
+      setInputValue("");
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -127,7 +160,7 @@ export function ChatInterface({ chatId, messages, onMessagesChange }: ChatInterf
       if (data.collected_info) setCollectedInfo(data.collected_info);
       if (data.done) {
         setStep(null);
-        setCollectedInfo({});
+        //setCollectedInfo({});
       }
     } catch (error) {
       console.error("Query error:", error);

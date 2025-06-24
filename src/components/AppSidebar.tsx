@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Plus, Upload, History } from "lucide-react";
-import { FileUpload } from "./FileUpload";
+//import { FileUpload } from "./FileUpload";
 import { ChatHistory } from "./ChatHistory";
 
 interface Message {
@@ -105,7 +105,7 @@ export function AppSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {activeSection === "upload" && <FileUpload />}
+        
         {activeSection === "history" && (
           <ChatHistory
             currentChatId={currentChatId}

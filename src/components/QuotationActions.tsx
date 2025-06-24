@@ -9,7 +9,8 @@ interface QuotationActionsProps {
   clientInfo: Record<string, string>; // name, company, email, etc.
 }
 
-interface Quotation {
+//changes
+interface Product {
   productName: string;
   specs: string;
   price: string;
@@ -17,25 +18,72 @@ interface Quotation {
   totalPrice: string;
 }
 
+interface Quotation {
+  products: Product[];
+  combinedTotal?: string; // Optional total price at the end
+}
+
 function parseQuotations(text: string): { quotations: Quotation[]; recommendation: string } {
-  const quotationRegex = /## Quotation \d+\s+Product Name: (.*?)\s+Specs: (.*?)\s+Price: (.*?)\s+Quantity: (.*?)\s+Total Price: (.*?)(?=(## Quotation \d+|## Recommendation|$))/gs;
   const recommendationMatch = text.match(/## Recommendation([\s\S]*)$/);
   const recommendation = recommendationMatch ? recommendationMatch[1].trim() : "";
 
+  const quotationBlocks = text.split(/## Quotation \d+/).slice(1);
   const quotations: Quotation[] = [];
-  let match;
-  while ((match = quotationRegex.exec(text)) !== null) {
-    quotations.push({
-      productName: match[1].trim(),
-      specs: match[2].trim(),
-      price: match[3].trim(),
-      quantity: match[4].trim(),
-      totalPrice: match[5].trim(),
-    });
+
+  for (const block of quotationBlocks) {
+    const lines = block.trim().split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+
+    const products: Product[] = [];
+    let currentProduct: Partial<Product> = {};
+
+    for (let line of lines) {
+      if (line.startsWith("Product:") || line.startsWith("Product Name:")) {
+        if (Object.keys(currentProduct).length > 0) {
+          products.push({
+            productName: currentProduct.productName || "N/A",
+            specs: currentProduct.specs || "N/A",
+            price: currentProduct.price || "N/A",
+            quantity: currentProduct.quantity || "N/A",
+            totalPrice: currentProduct.totalPrice || "N/A",
+          });
+          currentProduct = {};
+        }
+        currentProduct.productName = line.split(":")[1]?.trim() || "";
+      } else if (line.startsWith("Specs:")) {
+        currentProduct.specs = line.split(":")[1]?.trim() || "";
+      } else if (line.startsWith("Price:")) {
+        currentProduct.price = line.split(":")[1]?.trim() || "";
+      } else if (line.startsWith("Quantity:")) {
+        currentProduct.quantity = line.split(":")[1]?.trim() || "";
+      } else if (line.startsWith("Total:") || line.startsWith("Total Price:")) {
+        currentProduct.totalPrice = line.split(":")[1]?.trim() || "";
+      } else if (line.toLowerCase().startsWith("total combined price:")) {
+        // capture overall total
+        quotations.push({
+          products,
+          combinedTotal: line.split(":")[1]?.trim(),
+        });
+        return { quotations, recommendation }; // early return as it's the last block
+      }
+    }
+
+    // push last product
+    if (Object.keys(currentProduct).length > 0) {
+      products.push({
+        productName: currentProduct.productName || "N/A",
+        specs: currentProduct.specs || "N/A",
+        price: currentProduct.price || "N/A",
+        quantity: currentProduct.quantity || "N/A",
+        totalPrice: currentProduct.totalPrice || "N/A",
+      });
+    }
+
+    quotations.push({ products });
   }
 
   return { quotations, recommendation };
 }
+
 
 export function QuotationActions({ quotationText, clientInfo }: QuotationActionsProps) {
   const { toast } = useToast();
@@ -144,15 +192,27 @@ export function QuotationActions({ quotationText, clientInfo }: QuotationActions
       {/* Render quotations */}
       <div className="space-y-3">
         {quotations.map((q, idx) => (
-          <div key={idx} className="border rounded p-3 bg-white shadow-sm">
-            <h4 className="text-md font-semibold text-blue-700 mb-2">Quotation {idx + 1}</h4>
-            <p><span className="font-medium">Product:</span> {q.productName}</p>
-            <p><span className="font-medium">Specs:</span> {q.specs}</p>
-            <p><span className="font-medium">Price:</span> {q.price}</p>
-            <p><span className="font-medium">Quantity:</span> {q.quantity}</p>
-            <p><span className="font-medium">Total:</span> {q.totalPrice}</p>
-          </div>
-        ))}
+  <div key={idx} className="border rounded p-3 bg-white shadow-sm">
+    <h4 className="text-md font-semibold text-blue-700 mb-2">Quotation {idx + 1}</h4>
+    
+    {q.products.map((p, pIdx) => (
+      <div key={pIdx} className="mb-3 border-b pb-2">
+        <p><span className="font-medium">Product:</span> {p.productName}</p>
+        <p><span className="font-medium">Specs:</span> {p.specs}</p>
+        <p><span className="font-medium">Price:</span> {p.price}</p>
+        <p><span className="font-medium">Quantity:</span> {p.quantity}</p>
+        <p><span className="font-medium">Total:</span> {p.totalPrice}</p>
+      </div>
+    ))}
+
+    {q.combinedTotal && (
+      <p className="text-green-700 font-semibold mt-2">
+        Combined Total: {q.combinedTotal}
+      </p>
+    )}
+  </div>
+))}  
+
       </div>
 
       {/* Render recommendation */}

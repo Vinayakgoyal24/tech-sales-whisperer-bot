@@ -1,4 +1,3 @@
-
 import { Card } from "@/components/ui/card";
 import { Bot, User } from "lucide-react";
 
@@ -30,7 +29,12 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           ? "bg-white border-blue-200" 
           : "bg-blue-600 text-white border-blue-600"
       }`}>
-        <p className="text-sm leading-relaxed">{message.text}</p>
+        {/* ✅ Don't render text if it's a quotation */}
+        {!message.hasQuotation && (
+          <p className="text-sm leading-relaxed">{message.text}</p>
+        )}
+
+        {/* Always show the timestamp */}
         <p className={`text-xs mt-2 ${
           isBot ? "text-gray-500" : "text-blue-100"
         }`}>
