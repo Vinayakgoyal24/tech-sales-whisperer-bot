@@ -3,13 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FileText, Download, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import posthog from 'posthog-js';
 
 interface QuotationActionsProps {
-  quotationText: string; // Raw quotation output or prettified version
-  clientInfo: Record<string, string>; // name, company, email, etc.
+  quotationText: string;
+  clientInfo: Record<string, string>;
 }
 
-//changes
 interface Product {
   productName: string;
   specs: string;
@@ -20,25 +20,44 @@ interface Product {
 
 interface Quotation {
   products: Product[];
-  combinedTotal?: string; // Optional total price at the end
+  combinedTotal?: string;
 }
 
 function parseQuotations(text: string): { quotations: Quotation[]; recommendation: string } {
-  const recommendationMatch = text.match(/## Recommendation([\s\S]*)$/);
-  const recommendation = recommendationMatch ? recommendationMatch[1].trim() : "";
+  const FIELD_LABELS = {
+    productName: ["Product Name", "商品名"],
+    specs: ["Specs", "仕様"],
+    price: ["Price", "単価", "価格"],
+    quantity: ["Quantity", "数量"],
+    totalPrice: ["Total", "Total Price", "合計金額"],
+  };
 
-  const quotationBlocks = text.split(/## Quotation \d+/).slice(1);
+  const matchField = (line: string, key: keyof typeof FIELD_LABELS) =>
+    FIELD_LABELS[key].some(label => line.startsWith(`${label}:`));
+
+  const extractValue = (line: string) => line.split(":").slice(1).join(":").trim();
+
+  const recommendationMatch = text.match(/##\s*(Recommendation|推奨案|推奨)([\s\S]*)$/i);
+  const recommendation = recommendationMatch ? recommendationMatch[2].trim() : "";
+
+  const quotationBlocks = text
+    .split(/##\s*(Quotation\s*\d+|見積り\d+|見積もり\d+)/i)
+    .slice(1)
+    .filter((_, idx) => idx % 2 === 1);
+
   const quotations: Quotation[] = [];
 
   for (const block of quotationBlocks) {
-    const lines = block.trim().split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-
+    const lines = block.trim().split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     const products: Product[] = [];
     let currentProduct: Partial<Product> = {};
+    let specsLines: string[] = [];
+    let capturingSpecs = false;
 
-    for (let line of lines) {
-      if (line.startsWith("Product:") || line.startsWith("Product Name:")) {
+    for (const line of lines) {
+      if (matchField(line, "productName")) {
         if (Object.keys(currentProduct).length > 0) {
+          currentProduct.specs = currentProduct.specs || specsLines.join(" | ");
           products.push({
             productName: currentProduct.productName || "N/A",
             specs: currentProduct.specs || "N/A",
@@ -47,28 +66,43 @@ function parseQuotations(text: string): { quotations: Quotation[]; recommendatio
             totalPrice: currentProduct.totalPrice || "N/A",
           });
           currentProduct = {};
+          specsLines = [];
         }
-        currentProduct.productName = line.split(":")[1]?.trim() || "";
-      } else if (line.startsWith("Specs:")) {
-        currentProduct.specs = line.split(":")[1]?.trim() || "";
-      } else if (line.startsWith("Price:")) {
-        currentProduct.price = line.split(":")[1]?.trim() || "";
-      } else if (line.startsWith("Quantity:")) {
-        currentProduct.quantity = line.split(":")[1]?.trim() || "";
-      } else if (line.startsWith("Total:") || line.startsWith("Total Price:")) {
-        currentProduct.totalPrice = line.split(":")[1]?.trim() || "";
-      } else if (line.toLowerCase().startsWith("total combined price:")) {
-        // capture overall total
+        currentProduct.productName = extractValue(line);
+        capturingSpecs = false;
+      } else if (matchField(line, "specs")) {
+        const value = extractValue(line);
+        if (value) {
+          currentProduct.specs = value;
+          capturingSpecs = false;
+        } else {
+          capturingSpecs = true;
+          specsLines = [];
+        }
+      } else if (capturingSpecs && line.startsWith("-")) {
+        specsLines.push(line.replace(/^-/, "").trim());
+      } else if (matchField(line, "price")) {
+        const priceMatch = line.match(/¥[\d,]+(\.\d+)?/);
+        currentProduct.price = priceMatch ? priceMatch[0] : extractValue(line);
+        capturingSpecs = false;
+      } else if (matchField(line, "quantity")) {
+        const qtyMatch = line.match(/\d+/);
+        currentProduct.quantity = qtyMatch ? qtyMatch[0] : extractValue(line);
+      } else if (matchField(line, "totalPrice")) {
+        const totalMatch = line.match(/¥[\d,]+(\.\d+)?/);
+        currentProduct.totalPrice = totalMatch ? totalMatch[0] : extractValue(line);
+      } else if (/total combined price|合計金額合算/i.test(line)) {
+        const totalMatch = line.match(/¥[\d,]+(\.\d+)?/);
         quotations.push({
           products,
-          combinedTotal: line.split(":")[1]?.trim(),
+          combinedTotal: totalMatch ? totalMatch[0] : extractValue(line),
         });
-        return { quotations, recommendation }; // early return as it's the last block
+        return { quotations, recommendation };
       }
     }
 
-    // push last product
     if (Object.keys(currentProduct).length > 0) {
+      currentProduct.specs = currentProduct.specs || specsLines.join(" | ");
       products.push({
         productName: currentProduct.productName || "N/A",
         specs: currentProduct.specs || "N/A",
@@ -84,10 +118,9 @@ function parseQuotations(text: string): { quotations: Quotation[]; recommendatio
   return { quotations, recommendation };
 }
 
-
 export function QuotationActions({ quotationText, clientInfo }: QuotationActionsProps) {
   const { toast } = useToast();
-  const [email, setEmail] = useState(clientInfo.email || "");
+  const [emails, setEmails] = useState(clientInfo.email || "");
   const [sending, setSending] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
@@ -127,7 +160,14 @@ export function QuotationActions({ quotationText, clientInfo }: QuotationActions
         title: `${type.toUpperCase()} Downloaded`,
         description: `Quotation ${type.toUpperCase()} has been downloaded successfully.`,
       });
-    } catch (error) {
+      posthog.capture('quotation_downloaded', {
+      type: type.toUpperCase(),
+      client_email: clientInfo.email || 'unknown',
+      has_recommendation: !!recommendation,
+      product_count: quotations.reduce((acc, q) => acc + q.products.length, 0),
+    });
+    } 
+    catch (error) {
       console.error(`Error downloading ${type.toUpperCase()}:`, error);
       toast({
         title: "Download Failed",
@@ -140,10 +180,15 @@ export function QuotationActions({ quotationText, clientInfo }: QuotationActions
   };
 
   const handleSendEmail = async () => {
-    if (!email) {
+    const emailList = emails
+      .split(",")
+      .map(email => email.trim())
+      .filter(email => email.length > 0);
+
+    if (emailList.length === 0) {
       toast({
         title: "Email Required",
-        description: "Please enter a valid email address before sending.",
+        description: "Please enter at least one valid email address.",
         variant: "destructive",
       });
       return;
@@ -155,7 +200,7 @@ export function QuotationActions({ quotationText, clientInfo }: QuotationActions
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          to_email: email,
+          to_emails: emailList,
           subject: `Quotation for ${clientInfo.name || "Client"}`,
           body: `Dear ${clientInfo.name || "Client"},\n\nPlease find attached your quotation.\n\nRegards,\nYour Company`,
         }),
@@ -189,33 +234,28 @@ export function QuotationActions({ quotationText, clientInfo }: QuotationActions
         <span className="text-sm font-medium text-blue-800">Quotation Ready</span>
       </div>
 
-      {/* Render quotations */}
       <div className="space-y-3">
         {quotations.map((q, idx) => (
-  <div key={idx} className="border rounded p-3 bg-white shadow-sm">
-    <h4 className="text-md font-semibold text-blue-700 mb-2">Quotation {idx + 1}</h4>
-    
-    {q.products.map((p, pIdx) => (
-      <div key={pIdx} className="mb-3 border-b pb-2">
-        <p><span className="font-medium">Product:</span> {p.productName}</p>
-        <p><span className="font-medium">Specs:</span> {p.specs}</p>
-        <p><span className="font-medium">Price:</span> {p.price}</p>
-        <p><span className="font-medium">Quantity:</span> {p.quantity}</p>
-        <p><span className="font-medium">Total:</span> {p.totalPrice}</p>
-      </div>
-    ))}
-
-    {q.combinedTotal && (
-      <p className="text-green-700 font-semibold mt-2">
-        Combined Total: {q.combinedTotal}
-      </p>
-    )}
-  </div>
-))}  
-
+          <div key={idx} className="border rounded p-3 bg-white shadow-sm">
+            <h4 className="text-md font-semibold text-blue-700 mb-2">Quotation {idx + 1}</h4>
+            {q.products.map((p, pIdx) => (
+              <div key={pIdx} className="mb-3 border-b pb-2">
+                <p><span className="font-medium">Product:</span> {p.productName}</p>
+                <p><span className="font-medium">Specs:</span> {p.specs}</p>
+                <p><span className="font-medium">Price:</span> {p.price}</p>
+                <p><span className="font-medium">Quantity:</span> {p.quantity}</p>
+                <p><span className="font-medium">Total:</span> {p.totalPrice}</p>
+              </div>
+            ))}
+            {q.combinedTotal && (
+              <p className="text-green-700 font-semibold mt-2">
+                Combined Total: {q.combinedTotal}
+              </p>
+            )}
+          </div>
+        ))}
       </div>
 
-      {/* Render recommendation */}
       {recommendation && (
         <div className="border rounded p-4 bg-green-50 shadow-sm">
           <h4 className="text-md font-semibold text-green-700 mb-2">Recommendation</h4>
@@ -223,7 +263,6 @@ export function QuotationActions({ quotationText, clientInfo }: QuotationActions
         </div>
       )}
 
-      {/* Download and email buttons */}
       <div className="flex gap-2">
         <Button
           size="sm"
@@ -249,10 +288,10 @@ export function QuotationActions({ quotationText, clientInfo }: QuotationActions
 
       <div className="flex items-center gap-2">
         <input
-          type="email"
-          placeholder="Enter email address"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          type="text"
+          placeholder="Enter email addresses separated by commas"
+          value={emails}
+          onChange={(e) => setEmails(e.target.value)}
           className="border border-gray-300 rounded px-2 py-1 text-sm flex-grow"
         />
         <Button

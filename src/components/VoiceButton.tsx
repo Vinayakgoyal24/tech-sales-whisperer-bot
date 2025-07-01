@@ -5,9 +5,10 @@ import { useToast } from "@/hooks/use-toast";
 
 interface VoiceButtonProps {
   setInputText: (text: string) => void;
+  lang: "en-US" | "ja-JP";
 }
 
-export function VoiceButton({ setInputText }: VoiceButtonProps) {
+export function VoiceButton({ setInputText, lang }: VoiceButtonProps) {
   const [isRecording, setIsRecording] = useState(false);
   const { toast } = useToast();
 
@@ -17,42 +18,51 @@ export function VoiceButton({ setInputText }: VoiceButtonProps) {
 
     if (!SpeechRecognition) {
       toast({
-        title: "Not Supported",
-        description: "Your browser doesn't support Speech Recognition.",
+        title: lang === "ja-JP" ? "未対応" : "Not Supported",
+        description:
+          lang === "ja-JP"
+            ? "このブラウザでは音声認識がサポートされていません。"
+            : "Your browser doesn't support Speech Recognition.",
       });
       return;
     }
 
     const recognition = new SpeechRecognition();
-    recognition.lang = "en-US";
+    recognition.lang = lang;
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
       setIsRecording(true);
       toast({
-        title: "Voice Recording Started",
-        description: "Speak your query about products or quotations.",
+        title: lang === "ja-JP" ? "録音開始" : "Voice Recording Started",
+        description:
+          lang === "ja-JP"
+            ? "製品や見積もりに関するご質問を話してください。"
+            : "Speak your query about products or quotations.",
       });
     };
 
     recognition.onresult = (event) => {
       const spokenText = event.results[0][0].transcript;
-      setInputText(spokenText); // Send result to textbox
+      setInputText(spokenText);
     };
 
     recognition.onend = () => {
       setIsRecording(false);
       toast({
-        title: "Voice Recording Ended",
-        description: "You can now send your message.",
+        title: lang === "ja-JP" ? "録音終了" : "Voice Recording Ended",
+        description:
+          lang === "ja-JP"
+            ? "入力された内容を送信できます。"
+            : "You can now send your message.",
       });
     };
 
     recognition.onerror = (event) => {
       setIsRecording(false);
       toast({
-        title: "Voice Error",
+        title: lang === "ja-JP" ? "エラー" : "Voice Error",
         description: event.error,
       });
     };
@@ -70,6 +80,8 @@ export function VoiceButton({ setInputText }: VoiceButtonProps) {
           ? "bg-red-100 border-red-300 text-red-700 animate-pulse"
           : "border-blue-200 hover:bg-blue-50"
       }`}
+      title={lang === "ja-JP" ? "音声入力" : "Voice Input"}
+      aria-label={lang === "ja-JP" ? "音声入力" : "Voice Input"}
     >
       <Mic className="w-4 h-4" />
     </Button>
