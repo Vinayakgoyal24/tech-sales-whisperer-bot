@@ -2,15 +2,17 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Mic } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";   // ← ADD
 
-interface VoiceButtonProps {
-  setInputText: (text: string) => void;
-  lang: "en-US" | "ja-JP";
-}
 
-export function VoiceButton({ setInputText, lang }: VoiceButtonProps) {
+interface VoiceButtonProps { setInputText: (text: string) => void; }
+
+
+export function VoiceButton({ setInputText }: VoiceButtonProps) {
   const [isRecording, setIsRecording] = useState(false);
   const { toast } = useToast();
+  const { language: lang } = useLanguage();                 // ← ADD  (re-uses existing “lang” variable)
+
 
   const handleVoiceInteraction = () => {
     const SpeechRecognition =

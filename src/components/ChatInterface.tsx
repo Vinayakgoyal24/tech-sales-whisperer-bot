@@ -7,6 +7,8 @@ import { QuotationActions } from "./QuotationActions";
 import { VoiceButton } from "./VoiceButton";
 import { Send, Bot, Home, Volume2, VolumeX } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";   // ← ADD
+
 
 interface Message {
   id: string;
@@ -31,8 +33,8 @@ export function ChatInterface({ chatId, messages, onMessagesChange }: ChatInterf
   const [history, setHistory] = useState<any[][]>([]);
   const [isSpeechEnabled, setIsSpeechEnabled] = useState(true);
 
-  // New: state for language selection
-  const [language, setLanguage] = useState<"en-US" | "ja-JP">("en-US");
+  // Global language from context
+  const { language, setLanguage } = useLanguage();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -344,7 +346,7 @@ export function ChatInterface({ chatId, messages, onMessagesChange }: ChatInterf
           </Button>
 
           {/* Pass language prop to VoiceButton */}
-          <VoiceButton setInputText={setInputValue} lang={language} />
+          <VoiceButton setInputText={setInputValue} />      
 
           <Button
             onClick={handleSendMessage}

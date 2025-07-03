@@ -2,6 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MessageSquare, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";   // ← ADD
+import { t } from "@/utils/i18n";
 
 interface Message {
   id: string;
@@ -28,6 +30,7 @@ export function ChatHistory({
   setCurrentChatId,
 }: ChatHistoryProps) {
   const { toast } = useToast();
+  const { language } = useLanguage(); 
 
   const handleDeleteChat = (chatId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -38,8 +41,11 @@ export function ChatHistory({
     });
 
     toast({
-      title: "Chat Deleted",
-      description: "Chat history has been removed.",
+      title: t("chatHistory", language),
+      description:
+        language === "ja-JP"
+          ? "チャット履歴を削除しました。"
+          : "Chat history has been removed.",
     });
 
     if (chatId === currentChatId) {
@@ -51,7 +57,7 @@ export function ChatHistory({
     const lastMsg = messages[messages.length - 1];
     const title =
       messages.find((msg) => msg.sender === "user")?.text.slice(0, 30) ||
-      "New Chat";
+      t("newChat", language);
     return {
       id,
       title: id === "default" ? "Current Chat" : title,
@@ -64,7 +70,9 @@ export function ChatHistory({
 
   return (
     <Card className="p-4 border-blue-200">
-      <h3 className="font-medium text-gray-900 mb-3">Previous Chats</h3>
+      <h3 className="font-medium text-gray-900 mb-3">
+        {t("chatHistory", language)}
+      </h3>
 
       <div className="space-y-2">
         {chats.map((chat) => (
