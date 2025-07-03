@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { FileText, Download, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import posthog from 'posthog-js';
+import { useLanguage } from "@/contexts/LanguageContext";   // ← ADD
+import { t } from "@/utils/i18n"; 
 
 interface QuotationActionsProps {
   quotationText: string;
@@ -120,6 +122,8 @@ function parseQuotations(text: string): { quotations: Quotation[]; recommendatio
 
 export function QuotationActions({ quotationText, clientInfo }: QuotationActionsProps) {
   const { toast } = useToast();
+  const { language } = useLanguage();                    
+
   const [emails, setEmails] = useState(clientInfo.email || "");
   const [sending, setSending] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -231,7 +235,9 @@ export function QuotationActions({ quotationText, clientInfo }: QuotationActions
     <Card className="ml-11 mt-2 p-4 bg-blue-50 border-blue-200 space-y-5">
       <div className="flex items-center gap-2">
         <FileText className="w-4 h-4 text-blue-600" />
-        <span className="text-sm font-medium text-blue-800">Quotation Ready</span>
+        <span className="text-sm font-medium text-blue-800">
+          {t("quotationReady", language)}
+        </span>
       </div>
 
       <div className="space-y-3">
@@ -272,7 +278,9 @@ export function QuotationActions({ quotationText, clientInfo }: QuotationActions
           disabled={downloading}
         >
           <Download className="w-4 h-4 mr-1" />
-          {downloading ? "Downloading..." : "Download PDF"}
+          {downloading
+            ? language === "ja-JP" ? "ダウンロード中..." : "Downloading..."
+            : t("downloadPDF", language)}
         </Button>
         <Button
           size="sm"
@@ -282,7 +290,9 @@ export function QuotationActions({ quotationText, clientInfo }: QuotationActions
           disabled={downloading}
         >
           <Download className="w-4 h-4 mr-1" />
-          {downloading ? "Downloading..." : "Download PPT"}
+          {downloading
+            ? language === "ja-JP" ? "ダウンロード中..." : "Downloading..."
+            : t("downloadPPT", language)}
         </Button>
       </div>
 
@@ -302,7 +312,9 @@ export function QuotationActions({ quotationText, clientInfo }: QuotationActions
           className="border-green-400 text-green-700 hover:bg-green-100"
         >
           <Mail className="w-4 h-4 mr-1" />
-          {sending ? "Sending..." : "Send Email"}
+            {sending
+            ? language === "ja-JP" ? "送信中..." : "Sending..."
+            : t("sendEmail", language)}
         </Button>
       </div>
     </Card>

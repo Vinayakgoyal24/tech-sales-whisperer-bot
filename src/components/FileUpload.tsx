@@ -4,11 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Upload, FileText, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";   // ← ADD
+import { t } from "@/utils/i18n"; 
+
 
 export function FileUpload() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const { toast } = useToast();
+  const { language } = useLanguage();
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -36,8 +40,11 @@ export function FileUpload() {
       
       setUploadedFile(file);
       toast({
-        title: "File Uploaded",
-        description: `${file.name} uploaded successfully. Ready for quotation generation.`,
+        title: t("uploaded", language),
+        description:
+          language === "ja-JP"
+            ? `${file.name} をアップロードしました。見積もり生成の準備完了です。`
+            : `${file.name} uploaded successfully. Ready for quotation generation.`,
       });
     } catch (error) {
       console.error('Error uploading file:', error);
@@ -61,13 +68,14 @@ export function FileUpload() {
 
   return (
     <Card className="p-4 border-blue-200">
-      <h3 className="font-medium text-gray-900 mb-3">Upload File for Quotation</h3>
-      
+      <h3 className="font-medium text-gray-900 mb-3">
+        {t("uploadTitle", language)}
+      </h3>      
       {!uploadedFile ? (
         <div className="border-2 border-dashed border-blue-300 rounded-lg p-6 text-center">
           <Upload className="w-8 h-8 text-blue-500 mx-auto mb-2" />
           <p className="text-sm text-gray-600 mb-3">
-            Upload a file with your requirements
+            {t("uploadSubtitle", language)}
           </p>
           <input
             type="file"
@@ -83,7 +91,7 @@ export function FileUpload() {
             className="bg-blue-600 hover:bg-blue-700"
             disabled={isUploading}
           >
-            {isUploading ? "Uploading..." : "Choose File"}
+            {isUploading ? t("uploading", language) : t("chooseFile", language)}
           </Button>
           <p className="text-xs text-gray-500 mt-2">
             PDF, DOC, TXT, XLS supported
