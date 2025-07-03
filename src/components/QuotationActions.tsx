@@ -23,66 +23,125 @@ interface Quotation {
   combinedTotal?: string; // Optional total price at the end
 }
 
-function parseQuotations(text: string): { quotations: Quotation[]; recommendation: string } {
-  const recommendationMatch = text.match(/## Recommendation([\s\S]*)$/);
-  const recommendation = recommendationMatch ? recommendationMatch[1].trim() : "";
+// function parseQuotations(text: string): { quotations: Quotation[]; recommendation: string } {
+//   const recommendationMatch = text.match(/## Recommendation([\s\S]*)$/);
+//   const recommendation = recommendationMatch ? recommendationMatch[1].trim() : "";
 
-  const quotationBlocks = text.split(/## Quotation \d+/).slice(1);
+//   const quotationBlocks = text.split(/## Quotation \d+/).slice(1);
+//   const quotations: Quotation[] = [];
+
+//   for (const block of quotationBlocks) {
+//     const lines = block.trim().split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+
+//     const products: Product[] = [];
+//     let currentProduct: Partial<Product> = {};
+
+//     for (let line of lines) {
+//       if (line.startsWith("Product:") || line.startsWith("Product Name:")) {
+//         if (Object.keys(currentProduct).length > 0) {
+//           products.push({
+//             productName: currentProduct.productName || "N/A",
+//             specs: currentProduct.specs || "N/A",
+//             price: currentProduct.price || "N/A",
+//             quantity: currentProduct.quantity || "N/A",
+//             totalPrice: currentProduct.totalPrice || "N/A",
+//           });
+//           currentProduct = {};
+//         }
+//         currentProduct.productName = line.split(":")[1]?.trim() || "";
+//       } else if (line.startsWith("Specs:")) {
+//         currentProduct.specs = line.split(":")[1]?.trim() || "";
+//       } else if (line.startsWith("Price:")) {
+//         currentProduct.price = line.split(":")[1]?.trim() || "";
+//       } else if (line.startsWith("Quantity:")) {
+//         currentProduct.quantity = line.split(":")[1]?.trim() || "";
+//       } else if (line.startsWith("Total:") || line.startsWith("Total Price:")) {
+//         currentProduct.totalPrice = line.split(":")[1]?.trim() || "";
+//       } else if (line.toLowerCase().startsWith("total combined price:")) {
+//         // capture overall total
+//         quotations.push({
+//           products,
+//           combinedTotal: line.split(":")[1]?.trim(),
+//         });
+//         return { quotations, recommendation }; // early return as it's the last block
+//       }
+//     }
+
+//     // push last product
+//     if (Object.keys(currentProduct).length > 0) {
+//       products.push({
+//         productName: currentProduct.productName || "N/A",
+//         specs: currentProduct.specs || "N/A",
+//         price: currentProduct.price || "N/A",
+//         quantity: currentProduct.quantity || "N/A",
+//         totalPrice: currentProduct.totalPrice || "N/A",
+//       });
+//     }
+
+//     quotations.push({ products });
+//   }
+
+//   return { quotations, recommendation };
+// }
+
+/* ------------------------------------------------------------------ */
+/*  parseQuotations – bilingual, no empty blocks                      */
+/* ------------------------------------------------------------------ */
+function parseQuotations(text: string): { quotations: Quotation[]; recommendation: string } {
+  /* 1️⃣  Recommendation section (same) */
+  const recMatch = text.match(/##\s*(?:Recommendation|推薦)([\s\S]*)$/i);
+  const recommendation = recMatch ? recMatch[1].trim() : "";
+
+  /* 2️⃣  Split on **non-capturing** group  + trim/filter empty  */
+  const quotationBlocks = text
+    .split(/##\s*(?:Quotation|見積もり)\s+\d+\s*/i)  // (?:  ) = non-capturing
+    .slice(1)
+    .filter(b => b.trim().length);                  // remove blanks
+
   const quotations: Quotation[] = [];
 
+  /* 3️⃣  rest of code unchanged … */
+  const LABELS = {
+    product: [/^Product(?: Name)?:/, /^製品名:/],
+    specs:   [/^Specs?:/, /^スペック:|^仕様:/],
+    price:   [/^Price:/, /^価格:/],
+    qty:     [/^Quantity:/, /^数量:/],
+    total:   [/^Total(?: Price)?:/, /^合計価格?:/],
+    grand:   [/total combined price:/i, /合計金額|総合計:/],
+  };
+
   for (const block of quotationBlocks) {
-    const lines = block.trim().split(/\r?\n/).map(line => line.trim()).filter(Boolean);
-
+    const lines = block.trim().split(/\r?\n/).map(l => l.trim()).filter(Boolean);
     const products: Product[] = [];
-    let currentProduct: Partial<Product> = {};
+    let cur: Partial<Product> = {};
 
-    for (let line of lines) {
-      if (line.startsWith("Product:") || line.startsWith("Product Name:")) {
-        if (Object.keys(currentProduct).length > 0) {
-          products.push({
-            productName: currentProduct.productName || "N/A",
-            specs: currentProduct.specs || "N/A",
-            price: currentProduct.price || "N/A",
-            quantity: currentProduct.quantity || "N/A",
-            totalPrice: currentProduct.totalPrice || "N/A",
-          });
-          currentProduct = {};
-        }
-        currentProduct.productName = line.split(":")[1]?.trim() || "";
-      } else if (line.startsWith("Specs:")) {
-        currentProduct.specs = line.split(":")[1]?.trim() || "";
-      } else if (line.startsWith("Price:")) {
-        currentProduct.price = line.split(":")[1]?.trim() || "";
-      } else if (line.startsWith("Quantity:")) {
-        currentProduct.quantity = line.split(":")[1]?.trim() || "";
-      } else if (line.startsWith("Total:") || line.startsWith("Total Price:")) {
-        currentProduct.totalPrice = line.split(":")[1]?.trim() || "";
-      } else if (line.toLowerCase().startsWith("total combined price:")) {
-        // capture overall total
-        quotations.push({
-          products,
-          combinedTotal: line.split(":")[1]?.trim(),
-        });
-        return { quotations, recommendation }; // early return as it's the last block
+    for (const line of lines) {
+
+     // helper ─ everything after the FIRST colon
+      const afterColon = (l: string) => {
+        const i = l.indexOf(":");
+        return i === -1 ? "" : l.slice(i + 1).trim();
+      };
+      if (LABELS.product.some(r => r.test(line))) {
+        if (Object.keys(cur).length) { products.push(cur as Product); cur = {}; }
+        //cur.productName = line.split(":")[1]?.trim() || "";
+        cur.productName = afterColon(line);
+      } else if (LABELS.specs .some(r => r.test(line))) cur.specs    = afterColon(line);
+      else if (LABELS.price .some(r => r.test(line))) cur.price      = afterColon(line);
+      else if (LABELS.qty   .some(r => r.test(line))) cur.quantity   = afterColon(line);
+      else if (LABELS.total .some(r => r.test(line))) cur.totalPrice = afterColon(line);
+      else if (LABELS.grand .some(r => r.test(line))) {
+        quotations.push({ products, combinedTotal: line.split(":")[1]?.trim() });
+        return { quotations, recommendation };
       }
     }
-
-    // push last product
-    if (Object.keys(currentProduct).length > 0) {
-      products.push({
-        productName: currentProduct.productName || "N/A",
-        specs: currentProduct.specs || "N/A",
-        price: currentProduct.price || "N/A",
-        quantity: currentProduct.quantity || "N/A",
-        totalPrice: currentProduct.totalPrice || "N/A",
-      });
-    }
-
+    if (Object.keys(cur).length) products.push(cur as Product);
     quotations.push({ products });
   }
-
   return { quotations, recommendation };
 }
+
+
 
 
 export function QuotationActions({ quotationText, clientInfo }: QuotationActionsProps) {

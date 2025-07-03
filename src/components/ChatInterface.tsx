@@ -15,6 +15,7 @@ interface Message {
   timestamp: Date;
   hasQuotation?: boolean;
   collectedInfo?: Record<string, string>;
+  answerLang?: "en" | "ja";   
 }
 
 interface ChatInterfaceProps {
@@ -74,6 +75,7 @@ const isValidPhone = (phone: string) => {
     if (lastMessage.sender === "bot" && lastMessage.text.trim() !== "") {
       const sanitizedText = sanitizeTextForSpeech(lastMessage.text); // ✅
       const utterance = new SpeechSynthesisUtterance(sanitizedText);
+      utterance.lang = lastMessage.answerLang === "ja" ? "ja-JP" : "en-US";
       window.speechSynthesis.speak(utterance);
     }
   }, [messages, isSpeechEnabled]);
@@ -127,6 +129,7 @@ const isValidPhone = (phone: string) => {
         question: currentInput,
         step: step,
         collected_info: collectedInfo,
+        session_id: chatId,
       };
 
       const response = await fetch("http://localhost:8000/query", {
@@ -151,6 +154,7 @@ const isValidPhone = (phone: string) => {
         timestamp: new Date(),
         hasQuotation: data.has_quotation || false,
         collectedInfo: data.collected_info || {},
+        answerLang: data.answer_lang || "en",
       };
 
       const updatedBotMessages = [...updatedUserMessages, botResponse];
