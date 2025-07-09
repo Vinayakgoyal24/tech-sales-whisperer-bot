@@ -7,6 +7,8 @@ import { QuotationActions } from "./QuotationActions";
 import { VoiceButton } from "./VoiceButton";
 import { Send, Bot, Home, Volume2, VolumeX } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { t } from "@/i18n";
 
 interface Message {
   id: string;
@@ -31,6 +33,7 @@ export function ChatInterface({ chatId, messages, onMessagesChange }: ChatInterf
   const [collectedInfo, setCollectedInfo] = useState<Record<string, string>>({});
   const [history, setHistory] = useState<any[][]>([]);
   const [isSpeechEnabled, setIsSpeechEnabled] = useState(true);
+  const { mode } = useLanguage(); 
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -75,7 +78,16 @@ const isValidPhone = (phone: string) => {
     if (lastMessage.sender === "bot" && lastMessage.text.trim() !== "") {
       const sanitizedText = sanitizeTextForSpeech(lastMessage.text); // ✅
       const utterance = new SpeechSynthesisUtterance(sanitizedText);
-      utterance.lang = lastMessage.answerLang === "ja" ? "ja-JP" : "en-US";
+      
+      const langCode =
+      mode === "auto"
+        ? lastMessage.answerLang === "ja"
+          ? "ja-JP"
+          : "en-US"
+        : mode === "ja"
+        ? "ja-JP"
+        : "en-US";
+      utterance.lang = langCode;
       window.speechSynthesis.speak(utterance);
     }
   }, [messages, isSpeechEnabled]);
@@ -90,7 +102,7 @@ const isValidPhone = (phone: string) => {
 
     if (step === "email" && !isValidEmail(inputValue.trim())) {
       toast({
-        title: "Invalid Email",
+        title: t("invalidEmail", mode),
         description: "Please enter a valid email address.",
         variant: "destructive",
       });
@@ -130,6 +142,7 @@ const isValidPhone = (phone: string) => {
         step: step,
         collected_info: collectedInfo,
         session_id: chatId,
+        preferred_lang: mode === "auto" ? "auto" : mode,
       };
 
       const response = await fetch("http://localhost:8000/query", {
@@ -176,7 +189,7 @@ const isValidPhone = (phone: string) => {
 
       const errorMsg: Message = {
         id: (Date.now() + 2).toString(),
-        text: "I'm sorry, I'm having trouble connecting to the server right now. Please try again in a moment.",
+        text: t("serverBusyMsg", mode),
         sender: "bot",
         timestamp: new Date(),
       };
@@ -201,7 +214,7 @@ const isValidPhone = (phone: string) => {
 
     const welcome: Message = {
       id: "welcome",
-      text: "Hello! I'm your sales agent for computers and peripherals. I can help you find the perfect products, generate quotations, and answer any questions you have. Can I please know your name?",
+      text: t("welcome", mode),
       sender: "bot",
       timestamp: new Date(),
     };
@@ -229,8 +242,8 @@ const isValidPhone = (phone: string) => {
             <Bot className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h2 className="font-semibold text-gray-900">Sales Agent</h2>
-            <p className="text-sm text-green-600">Online</p>
+            <h2 className="font-semibold text-gray-900">{t("salesAgentTitle", mode)}</h2>
+            <p className="text-sm text-green-600">{t("onlineStatus", mode)}</p>
           </div>
         </div>
       </div>
@@ -274,7 +287,7 @@ const isValidPhone = (phone: string) => {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Ask about computers, peripherals, or request a quotation..."
+              placeholder={t("askPlaceholder", mode)}
               className="pr-12 border-blue-200 focus:border-blue-500"
               disabled={isTyping}
             />
@@ -290,8 +303,9 @@ const isValidPhone = (phone: string) => {
                 ? "border-blue-400 hover:bg-blue-100 text-blue-600"
                 : "bg-red-100 border-red-300 text-red-700 animate-pulse"
             }`}
-            aria-label={isSpeechEnabled ? "Mute Speech" : "Unmute Speech"}
-            title={isSpeechEnabled ? "Mute bot speech" : "Unmute bot speech"}
+              aria-label={isSpeechEnabled ? t("muteSpeechAria", mode) : t("unmuteSpeechAria", mode)}
+             title={isSpeechEnabled ? t("muteSpeechTitle", mode) : t("unmuteSpeechTitle", mode)}
+
           >
             {isSpeechEnabled ? (
               <Volume2 className="w-5 h-5" />
@@ -305,7 +319,7 @@ const isValidPhone = (phone: string) => {
             onClick={handleRestartSession}
             className="text-blue-600 border-blue-400 hover:bg-blue-100"
           >
-            <Home className="w-4 h-4 mr-1" /> Home
+            <Home className="w-4 h-4 mr-1" /> {t("home", mode)}
           </Button>
 
           <VoiceButton setInputText={setInputValue} />

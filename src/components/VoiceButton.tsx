@@ -1,5 +1,7 @@
 //import { useState } from "react";
 import { useState, useRef } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { t } from "@/i18n";
 import { Button } from "@/components/ui/button";
 import { Mic } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -18,9 +20,32 @@ export function VoiceButton({ setInputText }: VoiceButtonProps) {
   const silenceStartRef  = useRef<number | null>(null);
 
   const { toast } = useToast();
+  const { mode } = useLanguage();
 
   const startRecording = async () => {
     try {
+
+      /* ――― select STT engine ――― */
+      if (mode !== "auto") {
+        /* ─ Web-speech STT for EN/JA ─ */
+        const SpeechRecognition: any =
+          window.SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+          toast({ title: t("browserUnsupported", mode) });
+          return;
+        }
+        const recog = new SpeechRecognition();
+        recog.lang = mode === "ja" ? "ja-JP" : "en-US";
+        recog.onresult = (e: any) => {
+          setInputText(e.results[0][0].transcript);
+        };
+        recog.start();
+        return;
+      }
+
+
+
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
       const chunks: BlobPart[] = [];
@@ -77,7 +102,7 @@ export function VoiceButton({ setInputText }: VoiceButtonProps) {
         if (!res.ok) throw new Error(await res.text());
         const { text } = await res.json();
         if (text) setInputText(text);
-        else toast({ title: "😕 No speech detected" });
+        else toast({ title: t("noSpeech", mode) });
       };
 
       mediaRecorderRef.current = recorder;
@@ -86,12 +111,12 @@ export function VoiceButton({ setInputText }: VoiceButtonProps) {
 
       setIsRecording(true);
       toast({
-        title: "Recording…",
-        description: "Speak your query, click again to stop.",
+        title: t("recording", mode),
+        description: t("speakNow", mode),
       });
     } catch (err: any) {
       toast({
-        title: "Microphone error",
+        title: t("micError", mode),
         description: err.message ?? String(err),
       });
     }

@@ -3,11 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FileText, Download, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { t } from "@/i18n";
 
 interface QuotationActionsProps {
   quotationText: string; // Raw quotation output or prettified version
   clientInfo: Record<string, string>; // name, company, email, etc.
 }
+
+
+
 
 //changes
 interface Product {
@@ -146,6 +151,7 @@ function parseQuotations(text: string): { quotations: Quotation[]; recommendatio
 
 export function QuotationActions({ quotationText, clientInfo }: QuotationActionsProps) {
   const { toast } = useToast();
+  const { mode } = useLanguage();
   const [email, setEmail] = useState(clientInfo.email || "");
   const [sending, setSending] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -156,7 +162,7 @@ export function QuotationActions({ quotationText, clientInfo }: QuotationActions
     try {
       setDownloading(true);
       toast({
-        title: `Generating ${type.toUpperCase()}`,
+        title: type === "ppt" ? t("genPPT", mode) : t("genPDF", mode),
         description: `Please wait while we generate your quotation ${type.toUpperCase()}...`,
       });
 
@@ -245,28 +251,28 @@ export function QuotationActions({ quotationText, clientInfo }: QuotationActions
     <Card className="ml-11 mt-2 p-4 bg-blue-50 border-blue-200 space-y-5">
       <div className="flex items-center gap-2">
         <FileText className="w-4 h-4 text-blue-600" />
-        <span className="text-sm font-medium text-blue-800">Quotation Ready</span>
+        <span className="text-sm font-medium text-blue-800">{t("quotationReady", mode)}</span>
       </div>
 
       {/* Render quotations */}
       <div className="space-y-3">
         {quotations.map((q, idx) => (
   <div key={idx} className="border rounded p-3 bg-white shadow-sm">
-    <h4 className="text-md font-semibold text-blue-700 mb-2">Quotation {idx + 1}</h4>
+    <h4 className="text-md font-semibold text-blue-700 mb-2">{t("quotationLabel", mode)} {idx + 1}</h4>
     
     {q.products.map((p, pIdx) => (
       <div key={pIdx} className="mb-3 border-b pb-2">
-        <p><span className="font-medium">Product:</span> {p.productName}</p>
-        <p><span className="font-medium">Specs:</span> {p.specs}</p>
-        <p><span className="font-medium">Price:</span> {p.price}</p>
-        <p><span className="font-medium">Quantity:</span> {p.quantity}</p>
-        <p><span className="font-medium">Total:</span> {p.totalPrice}</p>
+        <p><span className="font-medium">{t("product", mode)}:</span> {p.productName}</p>
+        <p><span className="font-medium">{t("specs", mode)}:</span> {p.specs}</p>
+        <p><span className="font-medium">{t("price", mode)}:</span> {p.price}</p>
+        <p><span className="font-medium">{t("quantity", mode)}:</span> {p.quantity}</p>
+        <p><span className="font-medium">{t("total", mode)}:</span> {p.totalPrice}</p>
       </div>
     ))}
 
     {q.combinedTotal && (
       <p className="text-green-700 font-semibold mt-2">
-        Combined Total: {q.combinedTotal}
+        {t("combinedTotal", mode)}: {q.combinedTotal}
       </p>
     )}
   </div>
@@ -277,7 +283,7 @@ export function QuotationActions({ quotationText, clientInfo }: QuotationActions
       {/* Render recommendation */}
       {recommendation && (
         <div className="border rounded p-4 bg-green-50 shadow-sm">
-          <h4 className="text-md font-semibold text-green-700 mb-2">Recommendation</h4>
+          <h4 className="text-md font-semibold text-green-700 mb-2">{t("recommendation", mode)}</h4>
           <p className="text-gray-800 whitespace-pre-wrap">{recommendation}</p>
         </div>
       )}
@@ -292,7 +298,7 @@ export function QuotationActions({ quotationText, clientInfo }: QuotationActions
           disabled={downloading}
         >
           <Download className="w-4 h-4 mr-1" />
-          {downloading ? "Downloading..." : "Download PDF"}
+          {downloading ? t("downloading", mode) : t("downloadPDF", mode)}
         </Button>
         <Button
           size="sm"
@@ -302,14 +308,14 @@ export function QuotationActions({ quotationText, clientInfo }: QuotationActions
           disabled={downloading}
         >
           <Download className="w-4 h-4 mr-1" />
-          {downloading ? "Downloading..." : "Download PPT"}
+          {downloading ? t("downloading", mode) : t("downloadPPT", mode)}
         </Button>
       </div>
 
       <div className="flex items-center gap-2">
         <input
           type="email"
-          placeholder="Enter email address"
+          placeholder={t("enterEmail", mode)}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="border border-gray-300 rounded px-2 py-1 text-sm flex-grow"
@@ -322,7 +328,7 @@ export function QuotationActions({ quotationText, clientInfo }: QuotationActions
           className="border-green-400 text-green-700 hover:bg-green-100"
         >
           <Mail className="w-4 h-4 mr-1" />
-          {sending ? "Sending..." : "Send Email"}
+          {sending ? t("sending", mode) : t("sendEmail", mode)}
         </Button>
       </div>
     </Card>

@@ -13,7 +13,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Plus, Upload, History } from "lucide-react";
 //import { FileUpload } from "./FileUpload";
+import { LanguageToggle } from "./LanguageToggle";
 import { ChatHistory } from "./ChatHistory";
+import { t } from "@/i18n";
+import { useLanguage } from "@/contexts/LanguageContext";
+
 
 interface Message {
   id: string;
@@ -46,6 +50,7 @@ export function AppSidebar({
     onChatSelect(newChatId);
     setActiveSection("chat");
   };
+  const { mode } = useLanguage();
 
   return (
     <Sidebar className="border-r border-blue-200">
@@ -54,16 +59,21 @@ export function AppSidebar({
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
             <MessageSquare className="w-5 h-5 text-white" />
           </div>
-          <h1 className="font-bold text-gray-900">Sales Agent Bot</h1>
+          <h1 className="font-bold text-gray-900">{t("appTitle", mode)}</h1>
         </div>
         <p className="text-sm text-gray-600 mt-1">
-          Computer & Peripherals Expert
+          {t("subTitle", mode)}
         </p>
+
+        {/* language selector */}
+        <div className="mt-3">
+          <LanguageToggle />
+        </div>
       </SidebarHeader>
 
       <SidebarContent className="p-4 space-y-6">
         <SidebarGroup>
-          <SidebarGroupLabel>Actions</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("actions", mode)}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -72,7 +82,7 @@ export function AppSidebar({
                   className="w-full justify-start gap-2 bg-blue-600 hover:bg-blue-700"
                 >
                   <Plus className="w-4 h-4" />
-                  New Chat
+                  {t("newChat", mode)}
                 </Button>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -80,7 +90,7 @@ export function AppSidebar({
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Features</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("features", mode)}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -89,7 +99,7 @@ export function AppSidebar({
                   className={activeSection === "upload" ? "bg-blue-100" : ""}
                 >
                   <Upload className="w-4 h-4" />
-                  Upload File
+                  {t("uploadFile", mode)}
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
@@ -98,7 +108,7 @@ export function AppSidebar({
                   className={activeSection === "history" ? "bg-blue-100" : ""}
                 >
                   <History className="w-4 h-4" />
-                  Chat History
+                  {t("chatHistory", mode)}
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
