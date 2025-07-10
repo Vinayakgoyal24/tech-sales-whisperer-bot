@@ -8,6 +8,8 @@ import { VoiceButton } from "./VoiceButton";
 import { Send, Bot, Home, Volume2, VolumeX } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";   // ← ADD
+import AvatarCanvas from './AvatarCanvas'; // New avatar component
+import { ErrorBoundary } from "react-error-boundary";  // npm i react-error-boundary
 
 
 interface Message {
@@ -32,6 +34,10 @@ export function ChatInterface({ chatId, messages, onMessagesChange }: ChatInterf
   const [collectedInfo, setCollectedInfo] = useState<Record<string, string>>({});
   const [history, setHistory] = useState<any[][]>([]);
   const [isSpeechEnabled, setIsSpeechEnabled] = useState(true);
+  const [showAvatar, setShowAvatar] = useState(false);   // ← NEW
+  const [avatarAudio, setAvatarAudio] = useState("");    // ← NEW
+
+
 
   // Global language from context
   const { language, setLanguage } = useLanguage();
@@ -242,6 +248,35 @@ export function ChatInterface({ chatId, messages, onMessagesChange }: ChatInterf
     setCollectedInfo({});
   };
 
+// ▼ ADD START: avatar pitch
+const handleAvatarPitch = async () => {
+  const recMsg = messages.find(m => m.hasQuotation && m.sender === "bot");
+  if (!recMsg) return toast({ title: "No quotation yet." });
+
+  const scriptRes = await fetch("http://localhost:8000/generate-avatar-script", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      query: collectedInfo.requirement || "",
+      recommendation: recMsg.text,
+      feedback: "",
+    }),
+  });
+  const { script } = await scriptRes.json();
+
+  const audioRes = await fetch("http://localhost:8000/generate-avatar-audio", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ script }),
+  });
+  const blob = await audioRes.blob();
+  setAvatarAudio(URL.createObjectURL(blob));
+  setShowAvatar(true);
+};
+// ▲ ADD END
+
+
+
   const toggleSpeech = () => {
     if (isSpeechEnabled) {
       window.speechSynthesis.cancel();
@@ -335,6 +370,17 @@ export function ChatInterface({ chatId, messages, onMessagesChange }: ChatInterf
             {isSpeechEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
           </Button>
 
+
+          <Button
+            variant="outline"
+            onClick={handleAvatarPitch}
+            className="text-purple-600 border-purple-400 hover:bg-purple-100"
+            title="Avatar Pitch"
+          >
+            🎤 Avatar Pitch
+          </Button>
+
+
           <Button
             variant="outline"
             onClick={handleRestartSession}
@@ -358,6 +404,22 @@ export function ChatInterface({ chatId, messages, onMessagesChange }: ChatInterf
           </Button>
         </div>
       </div>
+        {/* ▼ ADD START : Avatar overlay */}
+        {showAvatar && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+            <div className="relative bg-white rounded-lg p-6 shadow-xl">
+              <button
+                className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+                onClick={() => setShowAvatar(false)}
+              >
+                ✖
+              </button>
+              <ErrorBoundary fallback={<p className="text-red-600">Avatar failed to load.</p>}>
+              <AvatarCanvas audioUrl={avatarAudio} />
+              </ErrorBoundary>
+            </div>
+          </div>
+        )}
     </div>
   );
 }
