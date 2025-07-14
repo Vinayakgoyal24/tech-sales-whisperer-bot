@@ -1,10 +1,10 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ChatInterface } from "@/components/ChatInterface";
 import { Toaster } from "@/components/ui/toaster";
+import { useLanguage } from "@/contexts/LanguageContext";          // ← NEW ✨
 
 interface Message {
   id: string;
@@ -15,73 +15,70 @@ interface Message {
   collectedInfo?: Record<string, string>;
 }
 
-const WELCOME_MESSAGE: Message = {
-  id: "welcome",
-  text: "Hello! I'm your sales agent. How are you doing? Feel free to inquire me about anything related to computer and its peripherals. May I know your name!",
-  sender: "bot",
-  timestamp: new Date(),
-};
-
 export default function Index() {
-  const [currentChatId, setCurrentChatId] = useState<string>("default");
+  /* ------------------------------------------------------------------ */
+  /* 1️⃣  Get the current UI language ("en-US" / "ja-JP") from context   */
+  /* ------------------------------------------------------------------ */
+  const { language } = useLanguage();                                // ← NEW
 
-  const [allChats, setAllChats] = useState<Record<string, Message[]>>({
-    default: [WELCOME_MESSAGE],
+  /* ------------------------------------------------------------------ */
+  /* 2️⃣  Build the welcome message in that language                     */
+  /* ------------------------------------------------------------------ */
+  const createWelcomeMessage = (): Message => ({
+    id: "welcome",
+    text:
+      language === "ja-JP"
+        ? "こんにちは！私は営業アシスタントです。コンピュータや周辺機器について何でもお尋ねください。お名前を教えていただけますか？"
+        : "Hello! I'm your sales agent. How are you doing? Feel free to inquire about anything related to computers and peripherals. May I know your name!",
+    sender: "bot",
+    timestamp: new Date(),
   });
 
-  // 🧠 Load from localStorage on mount
+  /* ------------------------------------------------------------------ */
+  /* 3️⃣  Initial state (runs once) and “New Chat” seeding               */
+  /* ------------------------------------------------------------------ */
+  const [currentChatId, setCurrentChatId] = useState<string>("default");
+  const [allChats, setAllChats] = useState<Record<string, Message[]>>({
+    default: [createWelcomeMessage()],
+  });
+
+  // 🧠 Load chats from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem("allChats");
-    const parsed = stored ? JSON.parse(stored) : null;
-
-    if (parsed) {
-      // Convert timestamp strings back to Date objects
+    if (stored) {
+      const parsed = JSON.parse(stored);
       const revived = Object.fromEntries(
         Object.entries(parsed).map(([id, msgs]) => [
           id,
-          msgs.map((m: Message) => ({
-            ...m,
-            timestamp: new Date(m.timestamp),
-          })),
+          msgs.map((m: Message) => ({ ...m, timestamp: new Date(m.timestamp) })),
         ])
       );
-
       setAllChats(revived);
     }
   }, []);
 
-  // 💾 Save to localStorage on change
+  // 💾 Persist chats whenever they change
   useEffect(() => {
     localStorage.setItem("allChats", JSON.stringify(allChats));
   }, [allChats]);
 
+  /* New-chat handler: seed with a language-appropriate greeting */
   const handleChatSelect = (chatId: string) => {
     setAllChats((prev) => {
       if (!prev[chatId]) {
-        return {
-          ...prev,
-          [chatId]: [
-            {
-              ...WELCOME_MESSAGE,
-              id: `welcome-${chatId}`,
-              timestamp: new Date(),
-            },
-          ],
-        };
+        return { ...prev, [chatId]: [{ ...createWelcomeMessage(), id: `welcome-${chatId}` }] };
       }
       return prev;
     });
-
     setCurrentChatId(chatId);
   };
 
-  const handleMessagesChange = (messages: Message[]) => {
-    setAllChats((prev) => ({
-      ...prev,
-      [currentChatId]: messages,
-    }));
-  };
+  const handleMessagesChange = (messages: Message[]) =>
+    setAllChats((prev) => ({ ...prev, [currentChatId]: messages }));
 
+  /* ------------------------------------------------------------------ */
+  /* 4️⃣  Render                                                         */
+  /* ------------------------------------------------------------------ */
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <SidebarProvider>
@@ -95,12 +92,11 @@ export default function Index() {
           />
           <main className="flex-1 flex flex-col">
             <ChatInterface
-            key={currentChatId} // 👈 this line forces full component re-initialization
-            chatId={currentChatId}
-            messages={allChats[currentChatId] || []}
-            onMessagesChange={handleMessagesChange}
-          />
-
+              key={currentChatId}
+              chatId={currentChatId}
+              messages={allChats[currentChatId] || []}
+              onMessagesChange={handleMessagesChange}
+            />
           </main>
         </div>
       </SidebarProvider>
