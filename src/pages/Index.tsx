@@ -28,8 +28,8 @@ export default function Index() {
     id: "welcome",
     text:
       language === "ja-JP"
-        ? "こんにちは！私は営業アシスタントです。コンピュータや周辺機器について何でもお尋ねください。お名前を教えていただけますか？"
-        : "Hello! I'm your sales agent. How are you doing? Feel free to inquire about anything related to computers and peripherals. May I know your name!",
+        ? "こんにちは！私はあなたのセールスエージェントです。ご機嫌いかがですか？コンピューターや周辺機器に関することなら何でもお気軽にお尋ねください。今日はどのようにお手伝いできますか？"
+        : "Hello! I'm your sales agent. How are you doing? Feel free to inquire about anything related to computers and peripherals. How may I help you today?",
     sender: "bot",
     timestamp: new Date(),
   });

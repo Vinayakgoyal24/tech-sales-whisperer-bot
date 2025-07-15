@@ -5,11 +5,21 @@ import axios from "axios";
 export default function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [company, setCompany] = useState("");
+  const [contact, setContact] = useState("");
+
   const navigate = useNavigate();
 
   const signup = async () => {
     try {
-      await axios.post("http://localhost:8000/signup", { email, password });
+      await axios.post("http://localhost:8000/signup", {
+        email,
+        password,
+        name,
+        company,
+        contact,
+      });
       alert("Signup successful");
       navigate("/login");
     } catch {
@@ -23,7 +33,7 @@ export default function Signup() {
       <img
         src="/logo.png"
         alt="Logo"
-        className="absolute top-4 right-4 w-24 h-24 object-contain"
+        className="absolute top-4 right-4 w-28 h-28 object-contain"
       />
 
       <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-lg z-10">
@@ -31,6 +41,24 @@ export default function Signup() {
           Create Your Account
         </h2>
         <div className="space-y-4">
+          <input
+            type="text"
+            placeholder="Name"
+            className="w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400"
+            onChange={(e) => setName(e.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Company"
+            className="w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400"
+            onChange={(e) => setCompany(e.target.value)}
+          />
+          <input
+            type="text"
+            placeholder="Contact Number"
+            className="w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-green-400"
+            onChange={(e) => setContact(e.target.value)}
+          />
           <input
             type="email"
             placeholder="Email"

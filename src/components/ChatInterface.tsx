@@ -25,6 +25,8 @@ interface ChatInterfaceProps {
   onMessagesChange: (updatedMessages: Message[]) => void;
 }
 
+
+
 export function ChatInterface({ chatId, messages, onMessagesChange }: ChatInterfaceProps) {
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -60,6 +62,31 @@ export function ChatInterface({ chatId, messages, onMessagesChange }: ChatInterf
     const re = /^\d{10}$/; // adjust regex as needed
     return re.test(phone);
   };
+
+
+  useEffect(() => {
+      const fetchUserProfile = async () => {
+        try {
+          const token = localStorage.getItem("token");
+          if (!token) return;
+
+          const response = await fetch("http://localhost:8000/me", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          if (!response.ok) throw new Error("Failed to fetch user profile");
+
+          const profile = await response.json();
+
+          setCollectedInfo({});
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+        }
+      };
+
+      fetchUserProfile();
+    }, []);
+
 
   useEffect(() => {
     scrollToBottom();
@@ -154,11 +181,17 @@ export function ChatInterface({ chatId, messages, onMessagesChange }: ChatInterf
         language, // you can pass language to backend if needed
       };
 
+      const token = localStorage.getItem("token");
+
       const response = await fetch("http://localhost:8000/query", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
         body: JSON.stringify(requestBody),
       });
+
 
       if (!response.ok) {
         const errorText = await response.text();
