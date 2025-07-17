@@ -82,3 +82,7 @@ export default function AvatarCanvas({ audioUrl }: { audioUrl: string }) {
 
 /* cache the GLB */
 useGLTF.preload("/avatar.glb");
+
+
+
+
